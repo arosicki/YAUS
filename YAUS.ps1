@@ -13,13 +13,12 @@
 #
 ################################################
 #Utilities
-$ErrorActionPreference= 'silentlycontinue'
+# $ErrorActionPreference= 'silentlycontinue'
 $nl = [Environment]::NewLine
-Set-Variable -Name badChoice -Value 0 -Scope script
 # Module Importing
 $files = Get-ChildItem ./Modules/*.ps1
-$modules = @()
 
+$modules = @()
 $files | ForEach-Object {
     . $_.FullName
     $filename = $_.Name
@@ -28,9 +27,9 @@ $files | ForEach-Object {
 
 #Menu Główne
 function mainMenu {
-    # cls
-    if ($badChoice -eq 1) {Write-Output "Select correct option..."}
-    Set-Variable -Name badChoice -Value 0 -Scope global
+    Clear-Host
+    if ($wrongChoice -eq 1) {Write-Output "Select correct option..."}
+    Set-Variable -Name wrongChoice -Value 0 -Scope global
     Write-Output "
 __   _____  _   _ _____ 
 \ \ / / _ \| | | /  ___|
@@ -60,8 +59,11 @@ elseif ($choice -eq $i) {
     exit
 }
 else {
-    Set-Variable -Name badChoice -Value 1 -Scope script
+    Clear-Host
+    Write-Output "Select correct option...
+Press Enter to continue..."
+    Read-Host
 }
 }
 Networking
-# while (1){mainMenu}
+ #while (1){mainMenu}
