@@ -38,16 +38,14 @@ function generateTxtFile {
     displayNetworkingInformation($script:networkAdapters) > ./networking-report.txt
     $file = Get-ChildItem ./networking-report.txt
     $file = $file.FullName
-    Write-Output "Created file $file
-Press Enter to continue..."
+    Write-Output "Created file $file" "Press Enter to continue..."
 Read-Host
 }
 function restartInterface($interface) {
     Restart-NetAdapter -Name $interface.Name
     Clear-Host
-            Write-Output "Success
-Press Enter to continue..."
-            Read-Host
+    Write-Output "Success" "Press Enter to continue..."
+    Read-Host
     selectEditAction($interface.ifIndex)
 }
 function toggleInterface($interface) {
@@ -59,69 +57,145 @@ function toggleInterface($interface) {
     }
     elseif($interface.Status -eq "Disabled"){
         Enable-NetAdapter -Name $interface.Name
+        Start-Sleep -s 2
         Write-Output "Success"
     }
     else {
         Write-Output "Your interface seems to be disconnected connect it to proceed, if you toggled your interface recently try again in few seconds"
     }
     Write-Output "Press Enter to continue..."
-        Read-Host
+    Read-Host
     selectEditAction($interface.ifIndex)
 }
 function toggleDHCP($interface) {
+    Clear-Host
+    if($interfaceEdit.DHCP -eq "Disabled") {
+        Set-NetIPInterface -InterfaceIndex $interface.ifIndex -Dhcp Enabled
+        Restart-NetAdapter -Name $interface.Name
+    }
+    else {
+        Set-NetIPInterface -InterfaceIndex $interface.ifIndex -Dhcp Disabled
+    }
+    Write-Output "Success" "Press Enter to continue..."
+    Read-Host
+    selectEditAction($interface.ifIndex)
+}
+function changeInterfaceName($interface) {
 
 }
 function changeIPAddress($interface) {
-
+    Clear-Host
+    $ipInput = Read-Host -Prompt "Enter new IP Address(or type C to Cancel)"
+    Clear-Host
+    if ($ipInput -ne "C") {
+        $isValid = [ipaddress]::TryParse($ipInput,[ref][ipaddress]::Loopback)
+        if ($isValid) {
+            if ($null -ne $interface.IPAddress) {
+                Get-NetAdapter -ifIndex $interface.ifIndex | Get-NetIPAddress -AddressFamily IPv4 | Remove-NetIPAddress -Confirm:$false
+            }
+            New-NetIPAddress -InterfaceIndex $interface.ifIndex -IPAddress $ipInput > $null
+            Set-NetIPAddress -InterfaceIndex $interface.ifIndex -IPAddress $ipInput -PrefixLength $interface.Prefix > $null
+            Read-Host -Prompt "Success $nl Press Enter to continue.."
+            selectEditAction($interface.ifIndex)
+        }
+        else {
+            Read-Host -Prompt "IP address is not valid try again... $nl Press Enter to continue.."
+            changeIPAddress($interface)
+        }
+    } 
+    else {
+        selectEditAction($interface.ifIndex)
+    }
+    
 }
 function changePrefix($interface) {
-
+    Clear-Host
+    $pxInput = Read-Host -Prompt "Enter new prefix length(or type C to Cancel)"
+    Clear-Host
+    if ($pxInput -eq "C") {
+        selectEditAction($interface.ifIndex)
+    }
+    elseif($pxInput -ge 0 -and $pxInput -le 32) {
+        Set-NetIPAddress -InterfaceIndex $interface.ifIndex -IPAddress $interface.IPAddress -PrefixLength $pxInput
+        Read-Host -Prompt "Success $nl Press Enter to continue.."
+        selectEditAction($interface.ifIndex)
+    }
+    else {
+        Read-Host -Prompt "Prefix length is not valid try again... $nl Press Enter to continue.."
+        changePrefix($interface)
+    }
 }
-
-
-
-
 
 function selectEditAction($ifNr) {
     Clear-Host
     getNetworkingInformation
     $interfaceEdit = $script:networkAdapters | Where-Object -Property ifIndex -eq -Value $ifNr
-    $editOptions = @("Restart Interface", "Toggle Interface", "Toggle DHCP")
+    $editOptions = @("Toggle Interface", "Change interface name")
     Write-Host -NoNewline "You selected interface $ifNr -" $interfaceEdit.InterfaceDescription $nl
-    if ($interfaceEdit.DHCP -eq "Disabled") {$editOptions += ("Edit IP Address", "Edit mask prefix")} else {Write-Output "Please note that in order to change prefix or IP Address you have to disable DHCP."}
+    if ($interfaceEdit.Status -eq "Up") {
+        $editOptions += ("Restart Interface", "Toggle DHCP")
+        if ($interfaceEdit.DHCP -eq "Disabled") {$editOptions += "Edit IP Address";if($null -ne $interfaceEdit.IPAddress) {$editOptions += "Edit mask prefix"}} 
+        else {
+            Write-Output "Please note that in order to change prefix or IP Address you have to disable DHCP."
+        }
+    }
+    else {
+        Write-Output "Enable interface to edit it's properties."
+    }
     displayNetworkingInformation($interfaceEdit)
-    $editOptions += "Cancel"
+    $editOptions += ("Refresh", "Cancel")
     for ($actionNr = 1; $actionNr -le $editOptions.Count; $actionNr++) {
         $a = $actionNr-1
         Write-Host -NoNewline $actionNr"." $editOptions[$a] $nl
     }
     $choiceNE = Read-Host -Prompt "Select your action"
     $choiceNE = [int]$choiceNE
-    switch ($choiceNE) {
-        1 { restartInterface($interfaceEdit); break }
-        2 { toggleInterface($interfaceEdit);break }
-        3 { toggleDHCP($interfaceEdit);break }
-        4 { if ($interfaceEdit.DHCP -eq "Enabled"){networkingMenu} else {
-            changeIPAddress($interfaceEdit)}break}
-        5 { if ($interfaceEdit.DHCP -eq "Disabled"){changePrefix($interfaceEdit)} else {Clear-Host
-            Write-Output "Select correct option...
-Press Enter to continue..."
-            Read-Host
-            selectEditAction($ifNR)}break}
-        6 { if ($interfaceEdit.DHCP -eq "Disabled"){networkingMenu} else {Clear-Host
-            Write-Output "Select correct option...
-Press Enter to continue..."
-            Read-Host
-            selectEditAction($ifNR)}break}
-        Default {
-            Clear-Host
-            Write-Output "Select correct option...
-Press Enter to continue..."
-            Read-Host
-            selectEditAction($ifNR)
+    if ($interfaceEdit.Status -eq "Up") {
+        if($interfaceEdit.DHCP -eq "Disabled") {
+            switch ($choiceNE) {
+                1 { toggleInterface($interfaceEdit);break }
+                2 { changeInterfaceName($interfaceEdit); break }
+                3 { restartInterface($interfaceEdit); break }
+                4 { toggleDHCP($interfaceEdit); break }
+                5 { changeIPAddress($interfaceEdit); break }
+                6 { if($null -ne $interfaceEdit.IPAddress){changePrefix($interfaceEdit)}else{selectEditAction($ifNR)} break }
+                7 { if($null -ne $interfaceEdit.IPAddress){selectEditAction($ifNR)}else{networkingMenu} break }
+                8 { if($null -ne $interfaceEdit.IPAddress){networkingMenu}else{Clear-Host; Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."; selectEditAction($ifNR)} break }
+                Default {
+                    Clear-Host
+                    Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."
+                    selectEditAction($ifNR)
+                }
+            }
+        }
+        else {
+            switch ($choiceNE) {
+                1 { toggleInterface($interfaceEdit);break }
+                2 { changeInterfaceName($interfaceEdit); break }
+                3 { restartInterface($interfaceEdit); break }
+                4 { toggleDHCP($interfaceEdit); break }
+                5 { selectEditAction($ifNR); break }
+                6 { networkingMenu; break }
+                Default {
+                    Clear-Host
+                    Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."
+                selectEditAction($ifNR)
+            }
+            }
         }
     }
-     
+    else {
+        switch ($choiceNE) {
+            1 { toggleInterface($interfaceEdit);break }
+            2 { changeInterfaceName($interfaceEdit); break }
+            3 { selectEditAction($ifNR); break }
+            4 { networkingMenu; break }
+            Default {Clear-Host
+                Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."
+            selectEditAction($ifNR)
+        }
+        }
+    } 
 }
 function selectNetworkInterface {
     Clear-Host
@@ -132,16 +206,14 @@ function selectNetworkInterface {
     }
     else {
         Clear-Host
-        Write-Output "Returning to menu...
-Press enter to continue..."
+        Write-Output "Returning to menu..." "Press enter to continue..."
         Read-Host
         networkingMenu
     }
 }
 function exportNetworkInterfaceInformation {
     Clear-Host
-    Write-Output "1. As .txt file
-2. Exit to main menu"
+    Write-Output "1. As .txt file" "2. Exit to main menu"
     $netDChoice = Read-Host -Prompt "How do you want to export data?"
     $netDChoice = [int]$netDChoice
     switch ($netDChoice) {
@@ -149,10 +221,9 @@ function exportNetworkInterfaceInformation {
         2 { networkingMenu; break }
         Default {
             Clear-Host
-    Write-Output "Select correct option...
-Press Enter to continue..."
-Read-Host
-exportNetworkInterfaceInformation
+            Write-Output "Select correct option..." "Press Enter to continue..."
+            Read-Host
+            exportNetworkInterfaceInformation
         }
 }
 }
@@ -169,9 +240,7 @@ function networkingMenu {
 |/    )_)(_______/   )_(   (_______)(_______)|/   \__/|_/    \/\_______/|/    )_)(_______)                                                                                       
 Interfaces:"
    displayNetworkingInformation($script:networkAdapters)
-   Write-Output "1. Edit Network Configuration
-2. Output Information to external file
-3. Exit to YAUS"
+   Write-Output "1. Edit Network Configuration" "2. Output Information to external file" "3. Exit to YAUS"
     $netChoice = Read-Host -Prompt "What do you want to do?"
     $netChoice = [int]$netChoice
     switch ($netChoice) {
@@ -180,8 +249,7 @@ Interfaces:"
         3 { return }
         Default {
             Clear-Host
-            Write-Output "Select correct option...
-Press Enter to continue..."
+            Write-Output "Select correct option..." "Press Enter to continue..."
             Read-Host
             networkingMenu
         }
