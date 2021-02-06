@@ -37,7 +37,7 @@ function mainMenu {
     Set-Variable -Name wrongChoice -Value 0 -Scope global
     Write-Output "
 __   _____  _   _ _____ 
-\ \ / / _ \| | | /  ___|
+\ \ / / _ \| | | /  ___|TM
  \ V / /_\ \ | | \ `--. 
   \ /|  _  | | | |`--. \
   | || | | | |_| /\__/ /

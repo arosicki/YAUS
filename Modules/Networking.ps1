@@ -81,7 +81,23 @@ function toggleDHCP($interface) {
     selectEditAction($interface.ifIndex)
 }
 function changeInterfaceName($interface) {
-
+    Clear-Host
+    $nameInput = Read-Host -Prompt "Enter new IP Address(or type C to Cancel)"
+    if ($nameInput -eq "C"){
+        selectEditAction($interface.ifIndex)
+    }
+    elseif($nameInput.Length -ge 2 -and $nameInput.Length -le 26) {
+        Rename-NetAdapter -Name $interface.Name -NewName $nameInpu
+        Clear-Host
+        Read-Host -Prompt "Success $nl Press Enter to continue.."
+        selectEditAction($interface.ifIndex)
+    }
+    else {
+        Clear-Host
+        Read-Host -Prompt "Your name is either too long or too short(network interface name should range between 2 and 26 characters) $nl Press Enter to continue.."
+        changeInterfaceName($interface)
+    }
+    
 }
 function changeIPAddress($interface) {
     Clear-Host
@@ -230,8 +246,8 @@ function exportNetworkInterfaceInformation {
 function networkingMenu {
     Clear-Host
     Write-Output "
- _        _______ _________          _______  _______  _       _________ _        _______ 
-( (    /|(  ____ \\__   __/|\     /|(  ___  )(  ____ )| \    /\\__   __/( (    /|(  ____ \
+ _ YAUS   _______ _________          _______  _______  _       _________ _        _______ 
+( (    /|(  ____ \\__   __/|\     /|(  ___  )(  ____ )| \    /\\__   __/( (    /|(  ____ \ TM
 |  \  ( || (    \/   ) (   | )   ( || (   ) || (    )||  \  / /   ) (   |  \  ( || (    \/
 |   \ | || (__       | |   | | _ | || |   | || (____)||  (_/ /    | |   |   \ | || |      
 | (\ \) ||  __)      | |   | |( )| || |   | ||     __)|   _ (     | |   | (\ \) || | ____ 
