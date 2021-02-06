@@ -32,8 +32,7 @@ function getNetworkingInformation {
     Write-Output "."
 }
 function displayNetworkingInformation {
-    $script:networkAdapters |
-    Sort-Object -Property ifIndex | Format-Table -Property ifIndex, Name, InterfaceDescription, Status, LinkSpeed, MacAddress, IPAddress, Prefix, AddressFamily, DHCP
+    $script:networkAdapters | Sort-Object -Property ifIndex | Format-Table -Property ifIndex, Name, InterfaceDescription, Status, LinkSpeed, MacAddress, IPAddress, Prefix, AddressFamily, DHCP
 }
 function generateTxtFile {
     displayNetworkingInformation > ./networking-report.txt
@@ -43,14 +42,30 @@ function generateTxtFile {
 Press Enter to continue..."
 Read-Host
 }
-function editNetworkInterface {
-
+function selectEditAction($ifNr) {
+    $interface = $script:networkAdapters | Where-Object -Property ifIndex -eq -Value $ifNr
+    Write-Host -NoNewline "You selected interface $ifNr -" $interface.InterfaceDescription $nl
+     
+}
+function selectNetworkInterface {
+    Clear-Host
+    displayNetworkingInformation
+    $netEChoice =  Read-Host -Prompt "Type in ifIndex of interface you want to edit(type anything else to exit to menu)"
+    if ( ($script:networkAdapters.ifIndex) -contains $netEChoice ) {
+        selectEditAction($netEChoice)
+    }
+    else {
+        Clear-Host
+        Write-Output "Returning to menu...
+Press enter to continue..."
+        Read-Host
+        networkingMenu
+    }
 }
 function exportNetworkInterfaceInformation {
     Clear-Host
     Write-Output "1. As .txt file
-2. As .htm file
-3. Exit to main menu"
+2. Exit to main menu"
     $netDChoice = Read-Host -Prompt "How do you want to export data?"
     $netDChoice = [int]$netDChoice
     switch ($netDChoice) {
@@ -81,10 +96,10 @@ Interfaces:"
    Write-Output "1. Edit Network Configuration
 2. Output Information to external file
 3. Exit to YAUS"
-    $netChoice = Read-Host -Prompt "What do you want to do"
+    $netChoice = Read-Host -Prompt "What do you want to do?"
     $netChoice = [int]$netChoice
     switch ($netChoice) {
-        1 { editNetworkInterface; break }
+        1 { selectNetworkInterface; break }
         2 { exportNetworkInterfaceInformation; break }
         3 { return }
         Default {
