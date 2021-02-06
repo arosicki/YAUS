@@ -29,27 +29,103 @@ function getNetworkingInformation {
                 DHCP                     = $NetIPInterface.Dhcp
                 }
     }
-    Write-Output "."
+    Clear-Host
 }
-function displayNetworkingInformation {
-    $script:networkAdapters | Sort-Object -Property ifIndex | Format-Table -Property ifIndex, Name, InterfaceDescription, Status, LinkSpeed, MacAddress, IPAddress, Prefix, AddressFamily, DHCP
+function displayNetworkingInformation($interface) {
+    $interface | Sort-Object -Property ifIndex | Format-Table -Property ifIndex, Name, InterfaceDescription, Status, LinkSpeed, MacAddress, IPAddress, Prefix, AddressFamily, DHCP
 }
 function generateTxtFile {
-    displayNetworkingInformation > ./networking-report.txt
+    displayNetworkingInformation($script:networkAdapters) > ./networking-report.txt
     $file = Get-ChildItem ./networking-report.txt
     $file = $file.FullName
     Write-Output "Created file $file
 Press Enter to continue..."
 Read-Host
 }
+function restartInterface($interface) {
+    Restart-NetAdapter -Name $interface.Name
+    Clear-Host
+            Write-Output "Success
+Press Enter to continue..."
+            Read-Host
+    selectEditAction($interface.ifIndex)
+}
+function toggleInterface($interface) {
+    Clear-Host
+    if ($interface.Status -eq "Up") {
+        Disable-NetAdapter -Name $interface.Name -Confirm:$false
+        Start-Sleep -s 2
+        Write-Output "Success"
+    }
+    elseif($interface.Status -eq "Disabled"){
+        Enable-NetAdapter -Name $interface.Name
+        Write-Output "Success"
+    }
+    else {
+        Write-Output "Your interface seems to be disconnected connect it to proceed, if you toggled your interface recently try again in few seconds"
+    }
+    Write-Output "Press Enter to continue..."
+        Read-Host
+    selectEditAction($interface.ifIndex)
+}
+function toggleDHCP($interface) {
+
+}
+function changeIPAddress($interface) {
+
+}
+function changePrefix($interface) {
+
+}
+
+
+
+
+
 function selectEditAction($ifNr) {
-    $interface = $script:networkAdapters | Where-Object -Property ifIndex -eq -Value $ifNr
-    Write-Host -NoNewline "You selected interface $ifNr -" $interface.InterfaceDescription $nl
+    Clear-Host
+    getNetworkingInformation
+    $interfaceEdit = $script:networkAdapters | Where-Object -Property ifIndex -eq -Value $ifNr
+    $editOptions = @("Restart Interface", "Toggle Interface", "Toggle DHCP")
+    Write-Host -NoNewline "You selected interface $ifNr -" $interfaceEdit.InterfaceDescription $nl
+    if ($interfaceEdit.DHCP -eq "Disabled") {$editOptions += ("Edit IP Address", "Edit mask prefix")} else {Write-Output "Please note that in order to change prefix or IP Address you have to disable DHCP."}
+    displayNetworkingInformation($interfaceEdit)
+    $editOptions += "Cancel"
+    for ($actionNr = 1; $actionNr -le $editOptions.Count; $actionNr++) {
+        $a = $actionNr-1
+        Write-Host -NoNewline $actionNr"." $editOptions[$a] $nl
+    }
+    $choiceNE = Read-Host -Prompt "Select your action"
+    $choiceNE = [int]$choiceNE
+    switch ($choiceNE) {
+        1 { restartInterface($interfaceEdit); break }
+        2 { toggleInterface($interfaceEdit);break }
+        3 { toggleDHCP($interfaceEdit);break }
+        4 { if ($interfaceEdit.DHCP -eq "Enabled"){networkingMenu} else {
+            changeIPAddress($interfaceEdit)}break}
+        5 { if ($interfaceEdit.DHCP -eq "Disabled"){changePrefix($interfaceEdit)} else {Clear-Host
+            Write-Output "Select correct option...
+Press Enter to continue..."
+            Read-Host
+            selectEditAction($ifNR)}break}
+        6 { if ($interfaceEdit.DHCP -eq "Disabled"){networkingMenu} else {Clear-Host
+            Write-Output "Select correct option...
+Press Enter to continue..."
+            Read-Host
+            selectEditAction($ifNR)}break}
+        Default {
+            Clear-Host
+            Write-Output "Select correct option...
+Press Enter to continue..."
+            Read-Host
+            selectEditAction($ifNR)
+        }
+    }
      
 }
 function selectNetworkInterface {
     Clear-Host
-    displayNetworkingInformation
+    displayNetworkingInformation($script:networkAdapters)
     $netEChoice =  Read-Host -Prompt "Type in ifIndex of interface you want to edit(type anything else to exit to menu)"
     if ( ($script:networkAdapters.ifIndex) -contains $netEChoice ) {
         selectEditAction($netEChoice)
@@ -92,7 +168,7 @@ function networkingMenu {
 | )  \  || (____/\   | |   | () () || (___) || ) \ \__|  /  \ \___) (___| )  \  || (___) |
 |/    )_)(_______/   )_(   (_______)(_______)|/   \__/|_/    \/\_______/|/    )_)(_______)                                                                                       
 Interfaces:"
-   displayNetworkingInformation
+   displayNetworkingInformation($script:networkAdapters)
    Write-Output "1. Edit Network Configuration
 2. Output Information to external file
 3. Exit to YAUS"

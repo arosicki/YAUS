@@ -13,7 +13,13 @@
 #
 ################################################
 #Utilities
+
+#Prevent execution without administative privileges
+#Requires -RunAsAdministrator
+
+#Prevents displaying erron messages
 # $ErrorActionPreference= 'silentlycontinue'
+
 $nl = [Environment]::NewLine
 # Module Importing
 $files = Get-ChildItem ./Modules/*.ps1
@@ -24,8 +30,7 @@ $files | ForEach-Object {
     $filename = $_.Name
     $modules += $filename.Substring(0,$filename.Length-4)
 }
-
-#Menu Główne
+#Main Menu
 function mainMenu {
     Clear-Host
     if ($wrongChoice -eq 1) {Write-Output "Select correct option..."}
