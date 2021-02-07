@@ -70,5 +70,4 @@ Press Enter to continue..."
     Read-Host
 }
 }
-Networking
- #while (1){mainMenu}
+while (1){mainMenu}
