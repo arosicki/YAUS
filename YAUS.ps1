@@ -1,6 +1,6 @@
 ################################################
 #
-# YAUS v1.0.1
+# YAUS v1.0.2
 # Adrian Rosicki
 #
 ################################################
@@ -33,8 +33,6 @@ $files | ForEach-Object {
 #Main Menu
 function mainMenu {  
     Clear-Host
-    if ($wrongChoice -eq 1) {Write-Output "Select correct option..."}
-    Set-Variable -Name wrongChoice -Value 0 -Scope global
     Write-Output "
 __   _____  _   _ _____ 
 \ \ / / _ \| | | /  ___|TM
@@ -65,7 +63,7 @@ elseif ($choice -eq $i) {
 else {
     Clear-Host
     Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."
-    
 }
 }
-while (1){mainMenu}
+ADSH
+# while (1){mainMenu}
