@@ -15,10 +15,10 @@
 #Utilities
 
 #Prevent execution without administative privileges
-#Requires -RunAsAdministrator
+# Requires -RunAsAdministrator
 
 #Prevents displaying erron messages
-# $ErrorActionPreference= 'silentlycontinue'
+# $ErrorActionPreference = 'silentlycontinue'
 
 $nl = [Environment]::NewLine
 # Module Importing
@@ -26,12 +26,12 @@ $files = Get-ChildItem ./Modules/*.ps1
 
 $modules = @()
 $files | ForEach-Object {
-    . $_.FullName
+    . $_
     $filename = $_.Name
     $modules += $filename.Substring(0,$filename.Length-4)
 }
 #Main Menu
-function mainMenu {
+function mainMenu {  
     Clear-Host
     if ($wrongChoice -eq 1) {Write-Output "Select correct option..."}
     Set-Variable -Name wrongChoice -Value 0 -Scope global
@@ -46,8 +46,7 @@ __   _____  _   _ _____
                         
 Modules:"
 if ($modules.Length -eq 0) {
-    Write-Output "No modules found chceck if your modules are in Modules folder...
-Exiting..."
+    Write-Output "No modules found chceck if your modules are in Modules folder..." "Exiting..."
     exit
 }
 For ([int]$i = 1; $i -le [int]$modules.Length; $i++) {
@@ -65,9 +64,8 @@ elseif ($choice -eq $i) {
 }
 else {
     Clear-Host
-    Write-Output "Select correct option...
-Press Enter to continue..."
-    Read-Host
+    Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."
+    
 }
 }
 while (1){mainMenu}
