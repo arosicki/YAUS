@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Commands>
+    <Command Name="Test" Description="Prints string to screen" Synopsis="test">
+        <Arguments>
+            <Argument Name="value" Mandatory="True" Position="0" Type="String" Default="test" Description="The value to print" />
+            <Argument Name="value2" Mandatory="False" Position="1" Type="String" Description="The value to print" />
+        </Arguments>
+        <Examples>
+            <Example value='echo "Hello World"'></Example>
+        </Examples>
+        <Code>Write-Output $value</Code>
+    </Command>
+</Commands>
