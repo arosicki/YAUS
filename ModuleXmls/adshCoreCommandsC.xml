@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Commands>
-    <Command Name="Test" Description="Prints string to screen" Synopsis="test">
+    <Command Name="Test" Description="Prints test string" Synopsis="Prints test string">
         <Arguments>
-            <Argument Name="value" Mandatory="True" Position="0" Type="String" Default="test" Description="The value to print" />
-            <Argument Name="value2" Mandatory="False" Position="1" Type="String" Description="The value to print" />
+            <Argument Name="value" Mandatory="True" Position="0" Type="String" Description="First value to print" />
+            <Argument Name="value2" Mandatory="False" Position="1" Type="String" Default="test" Description="Second value to print" />
         </Arguments>
         <Examples>
             <Example value='echo "Hello World"'></Example>
         </Examples>
-        <Code>Write-Output $value</Code>
+        <Code>Write-Output $value $value2</Code>
     </Command>
 </Commands>
