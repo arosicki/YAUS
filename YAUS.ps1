@@ -13,12 +13,14 @@
 #
 ################################################
 #Utilities
+$Script:version = "v1.0.2"
 
 #Prevent execution without administative privileges
 # Requires -RunAsAdministrator
 
 #Prevents displaying erron messages
 # $ErrorActionPreference = 'silentlycontinue'
+$WarningPreference = 'SilentlyContinue'
 
 $nl = [Environment]::NewLine
 # Module Importing
