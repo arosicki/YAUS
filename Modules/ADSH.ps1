@@ -65,10 +65,17 @@ function implementCommands {
             $count++
         }
         $manual = $nl + "<# " + $nl + ".SYNOPSIS " + $nl + $command.synopsis + $nl + ".DESCRIPTION " + $nl + $command.description + $argumentsManual + $examplesMaual + $nl +"#>" + $nl
-        "function Y-" + $command.Name + "{" + $manual + "param(" + $arguments + $nl + ")" + $nl + $command.code + $nl + "}" >> $file
+        "function ADSH-" + $command.Name + "{" + $manual + "param(" + $arguments + $nl + ")" + $nl + $command.code + $nl + "}" >> $file
     }
     Import-Module $file
     Remove-Item $file
+}
+function inputCommand {
+    
+    
+}
+function runCLI {
+    while(1){If (inputCommand){return}}
 }
 function ADSH {
     $osType = checkOS
@@ -79,14 +86,21 @@ function ADSH {
     }
     elseif ($osType -eq 3) {
         Clear-Host
-        $ifUpgrade = Read-Host "Your server is not domain controller do you want to promote it to domain controller(y/n)[Default:y]"$nl
+        $ifUpgrade = Read-Host "Your server is not domain controller do you want to promote it to domain controller. This will require a restart.(y/n)[Default:y]"
         if ($ifUpgrade -eq "n") {
             return
         }
+        Write-Output "Checking if AD Feature is installed and installing if needed..."
+        Add-WindowsFeature AD-Domain-Services
+        Write-Output "Enter domain name to promote server to domain controller"
+        $domainName = Read-Host -Prompt "Domain Name"
+        Install-ADDSForest -InstallDNS -DomainName $domainName
+        Write-Output "Rebooting..."
+        Restart-Computer
+        exit
     }
-    runCLI
-    $Script:version = "v1.0.0"
+    $Script:AdshVersion = "v1.0.0"
     getFiles
     implementCommands
-    Y-Test "Test"
+    runCLI
 }
