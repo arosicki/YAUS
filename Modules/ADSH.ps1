@@ -11,10 +11,11 @@
 # following the pattern [*c.xml]
 #
 ################################################
+$global:AdshVersion = "v1.0.0"
 function checkOS {
     Clear-Host
     Write-Output "Checking prerequisities"
-    return (Get-ComputerInfo).OsProductType
+    return (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
 }
 function getFiles {
     $count = 0
@@ -70,11 +71,48 @@ function implementCommands {
     Import-Module $file
     Remove-Item $file
 }
+function getObjectStructure {
+    $global:objects = @()
+    $tempObjects = Get-ADObject -Filter '*'
+    $tempObjects | ForEach-Object {
+        if($_.objectClass -ne "domainDNS"){
+        $prevObject = $_.DistinguishedName -replace '^[^,]*,', ""
+        $_ | Add-Member -NotePropertyName PreviousObject -NotePropertyValue $prevObject -Force
+        $global:objects += $_
+        }
+    }
+    $global:objects
+}
+function runCommand($commandInput) {
+    if ($commandInput -eq "exit"){return $true}
+    if ($commandInput -ne "") {
+        $commandInput = "ADSH-" + $commandInput
+        Invoke-Expression $commandInput
+    }
+    return $false
+}
 function inputCommand {
-    
-    
+    $CliPrompt = $env:UserName + "@" + $env:ComputerName + ":~/"
+    $outputArray = @()
+    if ($global:currentLoc -ne $global:ADSHhome) {
+    $global:currentLoc.DistinguishedName.split(",") | Where-Object {$_ -notmatch 'DC=.*'} | ForEach-Object {
+        $outputArray += $_.split("=")[1]
+    }
+    for ($i = $outputArray.count - 1; $i -ge 0; $i--) {
+        $CliPrompt += $outputArray[$i] + "/"
+    }
+    }
+    $CliPrompt += ">"
+    Write-Host -NoNewline $CliPrompt
+    $commandInput = Read-Host
+    if(runCommand($commandInput)){return $true}
 }
 function runCLI {
+    # Clear-Host
+    Write-Output "ADSH $global:Adshversion"
+    $global:ADSHhome = $objects | Where-Object {$_.objectClass -eq "domainDNS"}
+    $global:currentLoc = $global:ADSHhome
+    $global:currentLoc = $global:objects[15]
     while(1){If (inputCommand){return}}
 }
 function ADSH {
@@ -91,16 +129,20 @@ function ADSH {
             return
         }
         Write-Output "Checking if AD Feature is installed and installing if needed..."
-        Add-WindowsFeature AD-Domain-Services
+        Add-WindowsFeature AD-Domain-Services -Confirm
         Write-Output "Enter domain name to promote server to domain controller"
         $domainName = Read-Host -Prompt "Domain Name"
+        if (Read-Host -Prompt "Do you want to install extra Active Directory tools?[y/n](default:n)" -eq "y") {
+            Add-WindowsFeature *AD*
+        }
         Install-ADDSForest -InstallDNS -DomainName $domainName
         Write-Output "Rebooting..."
         Restart-Computer
         exit
     }
-    $Script:AdshVersion = "v1.0.0"
+    getObjectStructure
     getFiles
     implementCommands
     runCLI
 }
+

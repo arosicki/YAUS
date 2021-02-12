@@ -3,11 +3,21 @@
     <Command Name="Test" Description="Prints test string" Synopsis="Prints test string">
         <Arguments>
             <Argument Name="value" Mandatory="True" Position="0" Type="String" Description="First value to print" />
-            <Argument Name="value2" Mandatory="False" Position="1" Type="String" Default="test" Description="Second value to print" />
+            <Argument Name="value2" Mandatory="False" Position="1" Type="String" Description="Second value to print" />
         </Arguments>
         <Examples>
-            <Example value='echo "Hello World"'></Example>
+            <Example value='echo "Hello" "User"'></Example>
+            <Example value='echo "Have a nice day"'></Example>
         </Examples>
-        <Code>Write-Output $value $value2</Code>
+        <Code>Write-Host "$value $value2"</Code>
     </Command>
+    <Command Name="version" Description="Prints Current Active Directory Shell Version." Synopsis="Prints Current ADSH Version.">
+        <Arguments>
+        </Arguments>
+        <Examples>
+            <Example value="version"></Example>
+        </Examples>
+        <Code>Write-Host "$global:AdshVersion"</Code>
+    </Command>
+    
 </Commands>
