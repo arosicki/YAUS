@@ -13,7 +13,7 @@
 #
 ################################################
 #Utilities
-$Script:version = "v1.0.2"
+$Script:YAUSversion = "v1.0.2"
 
 #Prevent execution without administative privileges
 # Requires -RunAsAdministrator
