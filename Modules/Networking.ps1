@@ -4,6 +4,7 @@
 # Adrian Rosicki
 #
 ################################################
+$Script:networkingVersion = "v1.0.0"
 function getNetworkingInformation {
     Clear-Host
     Write-Output "Reading neworking information"
