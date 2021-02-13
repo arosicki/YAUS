@@ -60,16 +60,85 @@
                         if ($null -eq $target) {
                             Write-Host "No $_ dir found. Aborting."
                             $global:currentLoc = $initialPosition
+                            return
                         }
-                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS")) {
+                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer")) {
                             $global:currentLoc = $target;
+                            break
                         }
                         else {
                             Write-Host "$_ is not a container or OU. Aborting."
                             $global:currentLoc = $initialPosition
+                            return
                         }
                     }
                 }
+            }
+        </Code>
+    </Command>
+    <Command Name="ls" Description="Lists Files in current or specified dir." Synopsis="Lists Files in current or specified dir.">
+        <Arguments>
+            <Argument Name="directory" Mandatory="false" Position="0" Type="String" Default="." Description="Directory to show contents of" />
+            <Argument Name="flags" Mandatory="false" Position="1" Type="String" Description="Flags currently: R - recursive, A-Full Info." />   
+        </Arguments>
+        <Examples>
+            <Example value="ls ~ R"></Example>
+            <Example value="ls ~/users/"></Example>
+            <Example value="ls ."></Example>
+        </Examples>
+        <Code>
+            $tempDir = @()
+            $lsLocation = $global:currentLoc
+            $tempHomeDir = ""
+            $global:ADSHhome.DistinguishedName.split(",") | ForEach-Object {
+                $tempHomeDir = "/" + $_.split("=")[1] + $tempHomeDir
+            }
+            $directory = $directory -replace "$tempHomeDir","~"
+            $directory = $directory -replace '(^/)|(/$)',""
+            $tempDir = $directory.split("/")
+            for ($i = 0; $i -lt $tempDir.Count; $i++){
+                switch ($tempDir[$i]) {
+                    "" { break }
+                    "." { break }
+                    ".." { $lsLocation = $global:objects | Where-Object { $lsLocation.PreviousObject -eq $_.DistinguishedName }; break }
+                    "~" { $lsLocation = $global:ADSHhome ; break }
+                    Default {
+                        $target = $global:objects | Where-Object { $lsLocation.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
+                        if ($null -eq $target) {
+                            Write-Host "No $_ object found. Aborting."
+                            return
+                        }
+                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS")) {
+                            $lsLocation = $target;
+                            break
+                        }
+                        else {
+                            Write-Host "$target"
+                            return
+                        }
+                    }
+                }
+            }
+            $print = @()
+            $resultDirs = @()
+            $resultUsers = @()
+            $resultGroups = @()
+            $resultComputers = @()
+            $result = $global:objects | Where-Object { $lsLocation.DistinguishedName -eq $_.PreviousObject }
+            $result | Where-Object { $_.ObjectClass -in ("organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer") } | ForEach-Object {
+                Write-Host $_.Name -ForegroundColor 'Blue'
+            }
+            $result | Where-Object { $_.ObjectClass -in ("Person", "User", "InetOrgPerson", "contact") } | ForEach-Object {
+                 Write-Host $_.Name -ForegroundColor 'DarkGreen'
+            }
+            $result | Where-Object { $_.ObjectClass -eq "Group" } | ForEach-Object {
+                 Write-Host $_.Name -ForegroundColor 'Yellow'
+            }
+            $result | Where-Object { $_.ObjectClass -eq "Computer" } | ForEach-Object {
+                 Write-Host $_.Name -ForegroundColor 'Cyan'
+            }
+            $result | Where-Object { $_.ObjectClass -notin ("contact", "organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer", "Person", "User", "InetOrgPerson", "Group", "Computer") } | ForEach-Object {
+                 Write-Host $_.Name -ForegroundColor 'White'
             }
         </Code>
     </Command>
