@@ -13,7 +13,7 @@
 ################################################
 $global:AdshVersion = "v1.0.0"
 function checkOS {
-    Clear-Host
+    # Clear-Host
     Write-Output "Checking prerequisities"
     return (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
 }
@@ -25,7 +25,7 @@ function getFiles {
     $ADSHfiles | ForEach-Object {
         [xml]$xmlFile = Get-Content -Path $_.FullName
         $count++
-        Clear-Host
+        # Clear-Host
         Write-Host -NoNewline "Getting commands from XML files $nl $count of $nrOfFiles files $nl"
         ForEach ($XmlNode in $xmlFile.DocumentElement.ChildNodes) {
             $Script:xmlDB.DocumentElement.AppendChild($Script:xmlDB.ImportNode($XmlNode, $true)) > $null
@@ -33,9 +33,9 @@ function getFiles {
     }
 }
 function implementCommands {
-    Clear-Host
+    # Clear-Host
     Write-Host -NoNewline "Implementing" ($Script:xmlDB.Commands.Command.Name).Count "commands $nl"
-    $date = Get-Date -Format "yyyymmddHHmm"
+    $date = Get-Date -Format "yyyymmddHHmmss"
     $file = "tmp" + $date + ".psm1"
     "#Temporary YAUS Active Directory Shell File" > $file
     $file = Get-ChildItem -Path .\$file
@@ -94,7 +94,7 @@ function runCommand($commandInput) {
     return $false
 }
 function inputCommand {
-    $CliPrompt = $env:UserName + "@" + $env:ComputerName + ":~/"
+    $CliPrompt = $env:UserName + "@" + $global:fqdn + ":~/"
     $outputArray = @()
     if ($global:currentLoc -ne $global:ADSHhome) {
         $global:currentLoc.DistinguishedName.split(",") | Where-Object {$_ -notmatch 'DC=.*'} | ForEach-Object {
@@ -110,8 +110,9 @@ function inputCommand {
     if(runCommand($commandInput)){return $true}
 }
 function runCLI {
-    Clear-Host
+    # Clear-Host
     Write-Output "ADSH $global:Adshversion"
+    $global:fqdn = (Get-WmiObject win32_computersystem).Domain
     $global:ADSHhome = $global:objects | Where-Object {$_.objectClass -eq "domainDNS"}
     $global:currentLoc = $global:ADSHhome
     while(1){If (inputCommand){return}}
@@ -119,12 +120,12 @@ function runCLI {
 function ADSH {
     $osType = checkOS
     if($osType -eq 1) {
-        Clear-Host
+        # Clear-Host
         Read-Host "You do not run windows server..."$nl"In order to use ADSH run script in wndows server..."$nl"Exiting to YAUS.."
         return
     }
     elseif ($osType -eq 3) {
-        Clear-Host
+        # Clear-Host
         $ifUpgrade = Read-Host "Your server is not domain controller do you want to promote it to domain controller. This will require a restart.(y/n)[Default:y]"
         if ($ifUpgrade -eq "n") {
             return
