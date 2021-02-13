@@ -76,12 +76,14 @@ function getObjectStructure {
     $tempObjects = Get-ADObject -Filter '*'
     $tempObjects | ForEach-Object {
         if($_.objectClass -ne "domainDNS"){
-        $prevObject = $_.DistinguishedName -replace '^[^,]*,', ""
-        $_ | Add-Member -NotePropertyName PreviousObject -NotePropertyValue $prevObject -Force
-        $global:objects += $_
+            $prevObject = $_.DistinguishedName -replace '^[^,]*,', ""
+            $_ | Add-Member -NotePropertyName PreviousObject -NotePropertyValue $prevObject -Force
+            $global:objects += $_
+        }
+        else {
+            $global:objects += $_
         }
     }
-    $global:objects
 }
 function runCommand($commandInput) {
     if ($commandInput -eq "exit"){return $true}
@@ -95,7 +97,7 @@ function inputCommand {
     $CliPrompt = $env:UserName + "@" + $env:ComputerName + ":~/"
     $outputArray = @()
     if ($global:currentLoc -ne $global:ADSHhome) {
-    $global:currentLoc.DistinguishedName.split(",") | Where-Object {$_ -notmatch 'DC=.*'} | ForEach-Object {
+        $global:currentLoc.DistinguishedName.split(",") | Where-Object {$_ -notmatch 'DC=.*'} | ForEach-Object {
         $outputArray += $_.split("=")[1]
     }
     for ($i = $outputArray.count - 1; $i -ge 0; $i--) {
@@ -108,11 +110,10 @@ function inputCommand {
     if(runCommand($commandInput)){return $true}
 }
 function runCLI {
-    # Clear-Host
+    Clear-Host
     Write-Output "ADSH $global:Adshversion"
-    $global:ADSHhome = $objects | Where-Object {$_.objectClass -eq "domainDNS"}
+    $global:ADSHhome = $global:objects | Where-Object {$_.objectClass -eq "domainDNS"}
     $global:currentLoc = $global:ADSHhome
-    $global:currentLoc = $global:objects[15]
     while(1){If (inputCommand){return}}
 }
 function ADSH {
