@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Commands>
-    <Command Name="Test" Description="Prints test string" Synopsis="Prints test string">
+    <Command Name="test" Description="Prints test string" Synopsis="Prints test string">
         <Arguments>
             <Argument Name="value" Mandatory="True" Position="0" Type="String" Description="First value to print" />
             <Argument Name="value2" Mandatory="False" Position="1" Type="String" Description="Second value to print" />
@@ -11,7 +11,8 @@
         </Examples>
         <Code>Write-Host "$value $value2"</Code>
     </Command>
-    <Command Name="version" Description="Prints Current Active Directory Shell Version." Synopsis="Prints Current ADSH Version.">
+    <Command Name="version" Description="Prints Current Active Directory Shell Version."
+        Synopsis="Prints Current ADSH Version.">
         <Arguments>
         </Arguments>
         <Examples>
@@ -19,5 +20,57 @@
         </Examples>
         <Code>Write-Host "$global:AdshVersion"</Code>
     </Command>
-    
+    <Command Name="cls" Description="Clears Terminal" Synopsis="Clears Terminal">
+        <Arguments>
+        </Arguments>
+        <Examples>
+            <Example value="cls"></Example>
+        </Examples>
+        <Code>Clear-Host</Code>
+    </Command>
+    <Command Name="cd"
+        Description="Changes current directory to specified. Symbols: ~ home dir, . current dir, / root dir,  .. previous dir. "
+        Synopsis="Changes current directory to specified.">
+        <Arguments>
+            <Argument Name="directory" Mandatory="True" Position="0" Type="String" Description="Directory" />
+        </Arguments>
+        <Examples>
+            <Example value="cd /com/example/users/"></Example>
+            <Example value="cd ~/users/"></Example>
+            <Example value="cd ./users/"></Example>
+        </Examples>
+        <Code>
+            $tempDir = @()
+            $tempHomeDir = ""
+            $global:ADSHhome.DistinguishedName.split(",") | ForEach-Object {
+                $tempHomeDir = "/" + $_.split("=")[1] + $tempHomeDir
+            }
+            $directory = $directory -replace "$tempHomeDir","~"
+            $directory = $directory -replace '(^/)|(/$)',""
+            $tempDir = $directory.split("/")
+            $initialPosition = $global:currentLoc
+            for ($i = 0; $i -lt $tempDir.Count; $i++){
+                switch ($tempDir[$i]) {
+                    "" { break }
+                    "." { break }
+                    ".." { $global:currentLoc = $global:objects | Where-Object { $global:currentLoc.PreviousObject -eq $_.DistinguishedName }; break }
+                    "~" { $global:currentLoc = $global:ADSHhome ; break }
+                    Default {
+                        $target = $global:objects | Where-Object { $global:currentLoc.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
+                        if ($null -eq $target) {
+                            Write-Host "No $_ dir found. Aborting."
+                            $global:currentLoc = $initialPosition
+                        }
+                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS")) {
+                            $global:currentLoc = $target;
+                        }
+                        else {
+                            Write-Host "$_ is not a container or OU. Aborting."
+                            $global:currentLoc = $initialPosition
+                        }
+                    }
+                }
+            }
+        </Code>
+    </Command>
 </Commands>
