@@ -62,7 +62,7 @@
                             $global:currentLoc = $initialPosition
                             return
                         }
-                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer")) {
+                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer", "msTPM-InformationObjectsContainer")) {
                             $global:currentLoc = $target;
                             break
                         }
@@ -78,8 +78,7 @@
     </Command>
     <Command Name="ls" Description="Lists Files in current or specified dir." Synopsis="Lists Files in current or specified dir.">
         <Arguments>
-            <Argument Name="directory" Mandatory="false" Position="0" Type="String" Default="." Description="Directory to show contents of" />
-            <Argument Name="flags" Mandatory="false" Position="1" Type="String" Description="Flags currently: R - recursive, A-Full Info." />   
+            <Argument Name="directory" Mandatory="false" Position="0" Type="String" Description="Directory to show contents of" /> 
         </Arguments>
         <Examples>
             <Example value="ls ~ R"></Example>
@@ -88,7 +87,7 @@
         </Examples>
         <Code>
             $tempDir = @()
-            $lsLocation = $global:currentLoc
+            $delObjectTarget = $global:currentLoc
             $tempHomeDir = ""
             $global:ADSHhome.DistinguishedName.split(",") | ForEach-Object {
                 $tempHomeDir = "/" + $_.split("=")[1] + $tempHomeDir
@@ -100,16 +99,16 @@
                 switch ($tempDir[$i]) {
                     "" { break }
                     "." { break }
-                    ".." { $lsLocation = $global:objects | Where-Object { $lsLocation.PreviousObject -eq $_.DistinguishedName }; break }
-                    "~" { $lsLocation = $global:ADSHhome ; break }
+                    ".." { $delObjectTarget = $global:objects | Where-Object { $delObjectTarget.PreviousObject -eq $_.DistinguishedName }; break }
+                    "~" { $delObjectTarget = $global:ADSHhome ; break }
                     Default {
-                        $target = $global:objects | Where-Object { $lsLocation.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
+                        $target = $global:objects | Where-Object { $delObjectTarget.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
                         if ($null -eq $target) {
                             Write-Host "No $_ object found. Aborting."
                             return
                         }
-                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS")) {
-                            $lsLocation = $target;
+                        elseif ($target.ObjectClass -in ("organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer", "msTPM-InformationObjectsContainer")) {
+                            $delObjectTarget = $target;
                             break
                         }
                         else {
@@ -119,27 +118,143 @@
                     }
                 }
             }
-            $print = @()
-            $resultDirs = @()
-            $resultUsers = @()
-            $resultGroups = @()
-            $resultComputers = @()
-            $result = $global:objects | Where-Object { $lsLocation.DistinguishedName -eq $_.PreviousObject }
-            $result | Where-Object { $_.ObjectClass -in ("organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer") } | ForEach-Object {
-                Write-Host $_.Name -ForegroundColor 'Blue'
-            }
-            $result | Where-Object { $_.ObjectClass -in ("Person", "User", "InetOrgPerson", "contact") } | ForEach-Object {
-                 Write-Host $_.Name -ForegroundColor 'DarkGreen'
-            }
-            $result | Where-Object { $_.ObjectClass -eq "Group" } | ForEach-Object {
-                 Write-Host $_.Name -ForegroundColor 'Yellow'
-            }
-            $result | Where-Object { $_.ObjectClass -eq "Computer" } | ForEach-Object {
-                 Write-Host $_.Name -ForegroundColor 'Cyan'
-            }
-            $result | Where-Object { $_.ObjectClass -notin ("contact", "organizationalUnit", "container", "domainDNS", "msDS-QuotaContainer", "Person", "User", "InetOrgPerson", "Group", "Computer") } | ForEach-Object {
-                 Write-Host $_.Name -ForegroundColor 'White'
-            }
+            $result = $global:objects | Where-Object { $delObjectTarget.DistinguishedName -eq $_.PreviousObject } | Sort-Object -Property ObjectClass, Name | Format-Table -Property Name, ObjectClass | Out-String
+            $result | Out-HostColored @{ ('.+(([Cc]ontainer)|(organizationalUnit)|(domainDNS))\b') = "Blue"; ('.+\b((Person)|(User)|(InetOrgPerson)|(contact))\b') = "DarkGreen"; ('.+\bGroup\b') = "Yellow"; ('.+\bComputer\b') = "Cyan"}
         </Code>
+    </Command>
+    <Command Name="delObject" Description="Removes Active Directory object." Synopsis="Removes Active Directory object or objects.">
+        <Arguments>
+            <Argument Name="targetDir" Mandatory="True" Position="0" Type="String" Description="Target object" />
+        </Arguments>
+        <Examples>
+            <Example value='delObject testuser'></Example>
+            <Example value='delObject System'></Example>
+        </Examples>
+            <Code>
+                $tempDir = @()
+                $delObjectTarget = $global:currentLoc
+                $tempHomeDir = ""
+                $global:ADSHhome.DistinguishedName.split(",") | ForEach-Object {
+                    $tempHomeDir = "/" + $_.split("=")[1] + $tempHomeDir
+                }
+                $targetDir = $targetDir -replace "$tempHomeDir","~"
+                $targetDir = $targetDir -replace '(^/)|(/$)',""
+                $tempDir = $targetDir.split("/")
+                for ($i = 0; $i -lt $tempDir.Count; $i++){
+                    switch ($tempDir[$i]) {
+                        "" { break }
+                        "." { break }
+                        ".." { $delObjectTarget = $global:objects | Where-Object { $delObjectTarget.PreviousObject -eq $_.DistinguishedName }; break }
+                        "~" { $delObjectTarget = $global:ADSHhome ; break }
+                        Default {
+                            $target = $global:objects | Where-Object { $delObjectTarget.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
+                            if ($null -eq $target) {
+                                Write-Host "No $_ object found. Aborting."
+                                return
+                            }
+                            else {
+                                $delObjectTarget = $target;
+                                break   
+                            }
+                        }
+                    }
+                }
+                $delObjectTarget | Remove-ADObject
+                global:getObjectStructure
+            </Code>
+    </Command>
+    <Command Name="addUser" Description="Adds Active Directory user." Synopsis="Adds Active Directory user. With default password Pa$$w0rd">
+        <Arguments>
+            <Argument Name="targetDir" Mandatory="True" Type="String" Position="0" Description="New user location" />
+            <Argument Name="Password" Mandatory="False" Type="String" Description="User Password" />
+        </Arguments>
+        <Examples>
+            <Example value='addUser testuser ~/'></Example>
+            <Example value='addUser testuser -Password "zaq1@WSX"'></Example>
+        </Examples>
+            <Code>
+                $objectTarget = $global:currentLoc
+                $tempDir = @()
+                $tempHomeDir = ""
+                $global:ADSHhome.DistinguishedName.split(",") | ForEach-Object {
+                    $tempHomeDir = "/" + $_.split("=")[1] + $tempHomeDir
+                }
+                $targetDir = $targetDir -replace "$tempHomeDir","~"
+                $targetDir = $targetDir -replace '(^/)|(/$)',""
+                $tempDir = $targetDir.split("/")
+                for ($i = 0; $i -lt $tempDir.Count; $i++){
+                    switch ($tempDir[$i]) {
+                        "" { break }
+                        "." { break }
+                        ".." { $objectTarget = $global:objects | Where-Object { $objectTarget.PreviousObject -eq $_.DistinguishedName }; break }
+                        "~" { $objectTarget = $global:ADSHhome ; break }
+                        Default {
+                            $target = $global:objects | Where-Object { $objectTarget.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
+                            if ($null -eq $target -and $i -eq $tempDir.Count - 1) {
+                                $name = $tempDir[$i]
+                                break
+                            }
+                            elseif($i -lt $tempDir.Count - 1) {
+                                $objectTarget = $target
+                            }
+                            else {
+                                Write-Host "$_ object already exists. Aborting"
+                                return 
+                            }
+                        }
+                    }
+                }
+                $path = $objectTarget.DistinguishedName | Out-String
+                $command = 'New-ADUser -Path $path -Name "$name" -Confirm  -AccountPassword (ConvertTo-SecureString “Pa$$w0rd” -AsPlainText -force) -Enabled $true'
+                Invoke-Expression $command
+                global:getObjectStructure
+            </Code>
+    </Command>
+    <Command Name="addGroup" Description="Adds Active Directory group." Synopsis="Adds Active Directory group.">
+        <Arguments>
+            <Argument Name="targetDir" Mandatory="True" Type="String" Position="0" Description="New group location" />
+            <Argument Name="Type" Mandatory="False" Type="String" Position="1" Default="Security" Description="Group Type" />
+            <Argument Name="Scope" Mandatory="False" Type="String" Position="2" Default="DomainLocal" Description="Group Scope" />
+        </Arguments>
+        <Examples>
+            <Example value='addUser testuser ~/'></Example>
+            <Example value='addUser ../../users/testuser'></Example>
+        </Examples>
+            <Code>
+                $objectTarget = $global:currentLoc
+                $tempDir = @()
+                $tempHomeDir = ""
+                $global:ADSHhome.DistinguishedName.split(",") | ForEach-Object {
+                    $tempHomeDir = "/" + $_.split("=")[1] + $tempHomeDir
+                }
+                $targetDir = $targetDir -replace "$tempHomeDir","~"
+                $targetDir = $targetDir -replace '(^/)|(/$)',""
+                $tempDir = $targetDir.split("/")
+                for ($i = 0; $i -lt $tempDir.Count; $i++){
+                    switch ($tempDir[$i]) {
+                        "" { break }
+                        "." { break }
+                        ".." { $objectTarget = $global:objects | Where-Object { $objectTarget.PreviousObject -eq $_.DistinguishedName }; break }
+                        "~" { $objectTarget = $global:ADSHhome ; break }
+                        Default {
+                            $target = $global:objects | Where-Object { $objectTarget.DistinguishedName -eq $_.PreviousObject -and $_.Name -eq $tempDir[$i] }
+                            if ($null -eq $target -and $i -eq $tempDir.Count - 1) {
+                                $name = $tempDir[$i]
+                                break
+                            }
+                            elseif($i -lt $tempDir.Count - 1) {
+                                $objectTarget = $target
+                            }
+                            else {
+                                Write-Host "$_ object already exists. Aborting"
+                                return 
+                            }
+                        }
+                    }
+                }
+                $path = $objectTarget.DistinguishedName | Out-String
+                New-ADGroup -Path $path -Name "$name" -Confirm -GroupCategory "$type" -GroupScope "$scope"
+                global:getObjectStructure
+            </Code>
     </Command>
 </Commands>
