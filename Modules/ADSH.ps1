@@ -13,7 +13,7 @@
 ################################################
 $global:AdshVersion = "v1.0.0"
 function checkOS {
-    # Clear-Host
+    Clear-Host
     Write-Output "Checking prerequisities"
     return (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
 }
@@ -25,7 +25,7 @@ function getFiles {
     $ADSHfiles | ForEach-Object {
         [xml]$xmlFile = Get-Content -Path $_.FullName
         $count++
-        # Clear-Host
+        Clear-Host
         Write-Host -NoNewline "Getting commands from XML files $nl $count of $nrOfFiles files $nl"
         ForEach ($XmlNode in $xmlFile.DocumentElement.ChildNodes) {
             $Script:xmlDB.DocumentElement.AppendChild($Script:xmlDB.ImportNode($XmlNode, $true)) > $null
@@ -33,7 +33,7 @@ function getFiles {
     }
 }
 function implementCommands {
-    # Clear-Host
+    Clear-Host
     Write-Host -NoNewline "Implementing" ($Script:xmlDB.Commands.Command.Name).Count "commands $nl"
     $date = Get-Date -Format "yyyymmddHHmmss"
     $file = "tmp" + $date + ".psm1"
@@ -58,7 +58,19 @@ function implementCommands {
                 $default = ""
                 $defaultManual= ""
             }
-            $arguments += "$nl[Parameter(Position=" + $param.Position + ", Mandatory=$" + $param.Mandatory + ")][" + $param.Type + "]" + "$" + $param.Name + $default
+            if($null -ne $param.Position) {
+                $position = "Position=" + $param.Position + ','
+            }
+            else {
+                $position = ""
+            }
+            if ($null -ne $param.Type) {
+                $type= "[" + $param.Type + "]"
+            }
+            else {
+                $type = ""
+            }
+            $arguments += "$nl[Parameter(" +  $position + "Mandatory=$" + $param.Mandatory + ")]" + $type + "$" + $param.Name + $default
             if($count -lt ($command.Arguments.Argument).Count) {$arguments += ","}
             $argumentsManual += $nl + ".PARAMETER " +  $param.Name + $nl
             if($param.Mandatory -eq "True") { $argumentsManual += "[Mandatory]" }
@@ -71,7 +83,7 @@ function implementCommands {
     Import-Module $file
     Remove-Item $file
 }
-function getObjectStructure {
+function global:getObjectStructure {
     $global:objects = @()
     $tempObjects = Get-ADObject -Filter '*'
     $tempObjects | ForEach-Object {
@@ -110,7 +122,7 @@ function inputCommand {
     if(runCommand($commandInput)){return $true}
 }
 function runCLI {
-    # Clear-Host
+    Clear-Host
     Write-Output "ADSH $global:Adshversion"
     $global:fqdn = (Get-WmiObject win32_computersystem).Domain
     $global:ADSHhome = $global:objects | Where-Object {$_.objectClass -eq "domainDNS"}
@@ -120,12 +132,12 @@ function runCLI {
 function ADSH {
     $osType = checkOS
     if($osType -eq 1) {
-        # Clear-Host
+        Clear-Host
         Read-Host "You do not run windows server..."$nl"In order to use ADSH run script in wndows server..."$nl"Exiting to YAUS.."
         return
     }
     elseif ($osType -eq 3) {
-        # Clear-Host
+        Clear-Host
         $ifUpgrade = Read-Host "Your server is not domain controller do you want to promote it to domain controller. This will require a restart.(y/n)[Default:y]"
         if ($ifUpgrade -eq "n") {
             return
@@ -135,14 +147,15 @@ function ADSH {
         Write-Output "Enter domain name to promote server to domain controller"
         $domainName = Read-Host -Prompt "Domain Name"
         if (Read-Host -Prompt "Do you want to install extra Active Directory tools?[y/n](default:n)" -eq "y") {
-            Add-WindowsFeature *AD*
+            Add-WindowsFeature RSAT-AD-Tools -Confirm
         }
         Install-ADDSForest -InstallDNS -DomainName $domainName
         Write-Output "Rebooting..."
         Restart-Computer
         exit
     }
-    getObjectStructure
+    Import-Module .\ThirdParty\Out-HostColored.psm1
+    global:getObjectStructure
     getFiles
     implementCommands
     runCLI
