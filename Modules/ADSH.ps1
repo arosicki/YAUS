@@ -13,33 +13,33 @@
 ################################################
 $global:AdshVersion = "v1.1.0"
 function checkOS {
-    # Clear-Host
+    Clear-Host
     Write-Output "Checking prerequisities"
     return (Get-CimInstance -ClassName Win32_OperatingSystem).ProductType
 }
 function getFiles {
     $count = 0
-    [xml]$Script:xmlDB = '<?xml version="1.0" encoding="utf-8"?><Commands></Commands>'
+    [xml]$global:xmlDB = '<?xml version="1.0" encoding="utf-8"?><Commands></Commands>'
     $ADSHfiles = Get-ChildItem ./ModuleXmls/*c.xml
     $nrOfFiles = $ADSHfiles.Count
     $ADSHfiles | ForEach-Object {
-        [xml]$xmlFile = Get-Content -Path $_.FullName
+        [xml]$global:xmlFile = Get-Content -Path $_.FullName
         $count++
-        # Clear-Host
+        Clear-Host
         Write-Host -NoNewline "Getting commands from XML files $nl $count of $nrOfFiles files $nl"
-        ForEach ($XmlNode in $xmlFile.DocumentElement.ChildNodes) {
-            $Script:xmlDB.DocumentElement.AppendChild($Script:xmlDB.ImportNode($XmlNode, $true)) > $null
+        ForEach ($XmlNode in $global:xmlFile.DocumentElement.ChildNodes) {
+            $global:xmlDB.DocumentElement.AppendChild($global:xmlDB.ImportNode($XmlNode, $true)) > $null
         }
     }
 }
 function implementCommands {
-    # Clear-Host
-    Write-Host -NoNewline "Implementing" ($Script:xmlDB.Commands.Command.Name).Count "commands $nl"
+    Clear-Host
+    Write-Host -NoNewline "Implementing" ($global:xmlDB.Commands.Command.Name).Count "commands $nl"
     $date = Get-Date -Format "yyyymmddHHmmss"
     $file = "tmp" + $date + ".psm1"
     "#Temporary YAUS Active Directory Shell File" > $file
     $file = Get-ChildItem -Path .\$file
-    ForEach($command in $Script:xmlDB.Commands.Command) {
+    ForEach($command in $global:xmlDB.Commands.Command) {
         $arguments = ""
         $argumentsManual = ""
         $examplesMaual = ""
@@ -122,7 +122,7 @@ function inputCommand {
     if(runCommand($commandInput)){return $true}
 }
 function runCLI {
-    # Clear-Host
+    Clear-Host
     Write-Output "ADSH $global:Adshversion"
     $global:fqdn = (Get-WmiObject win32_computersystem).Domain
     $global:ADSHhome = $global:objects | Where-Object {$_.objectClass -eq "domainDNS"}
@@ -132,12 +132,12 @@ function runCLI {
 function ADSH {
     $osType = checkOS
     if($osType -eq 1) {
-        # Clear-Host
+        Clear-Host
         Read-Host "You do not run windows server..."$nl"In order to use ADSH run script in wndows server..."$nl"Exiting to YAUS.."
         return
     }
     elseif ($osType -eq 3) {
-        # Clear-Host
+        Clear-Host
         $ifUpgrade = Read-Host "Your server is not domain controller do you want to promote it to domain controller. This will require a restart.(y/n)[Default:y]"
         if ($ifUpgrade -eq "n") {
             return
@@ -154,7 +154,6 @@ function ADSH {
         Restart-Computer
         exit
     }
-    Import-Module .\ThirdParty\Out-HostColored.psm1
     global:getObjectStructure
     getFiles
     implementCommands

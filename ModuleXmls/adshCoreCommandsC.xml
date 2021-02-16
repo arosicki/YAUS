@@ -166,7 +166,6 @@
     <Command Name="addUser" Description="Adds Active Directory user." Synopsis="Adds Active Directory user. With default password Pa$$w0rd">
         <Arguments>
             <Argument Name="targetDir" Mandatory="True" Type="String" Position="0" Description="New user location" />
-            <Argument Name="Password" Mandatory="False" Type="String" Description="User Password" />
         </Arguments>
         <Examples>
             <Example value='addUser testuser ~/'></Example>
@@ -217,7 +216,7 @@
             <Argument Name="Scope" Mandatory="False" Type="String" Position="2" Default="DomainLocal" Description="Group Scope" />
         </Arguments>
         <Examples>
-            <Example value='addUser testuser ~/'></Example>
+            <Example value='addUser  ~/testuser'></Example>
             <Example value='addUser ../../users/testuser'></Example>
         </Examples>
             <Code>
@@ -256,5 +255,25 @@
                 New-ADGroup -Path $path -Name "$name" -Confirm -GroupCategory "$type" -GroupScope "$scope"
                 global:getObjectStructure
             </Code>
+    </Command>
+    <Command Name="help" Description="Displays all commands or info on one of the commands"
+        Synopsis="Displays all commands or info on one of the commands">
+        <Arguments>
+            <Argument Name="command" Mandatory="False" Position="0" Type="String" Description="Command to display info about" />
+        </Arguments>
+        <Examples>
+            <Example value="help"></Example>
+            <Example value="help ls"></Example>
+        </Examples>
+        <Code>
+            If ($command -eq "") {
+                $output = $global:xmlFile.commands.command | Format-Wide | Out-String
+                Write-Host "$output"
+            }
+            else {
+                #$command = "ADSH-" + $command
+                #Get-Help $command
+            }
+        </Code>
     </Command>
 </Commands>

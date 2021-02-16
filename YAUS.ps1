@@ -16,10 +16,10 @@
 $Script:YAUSversion = "v1.0.2"
 
 #Prevent execution without administative privileges
-# Requires -RunAsAdministrator
+#Requires -RunAsAdministrator
 
 #Prevents displaying erron messages
-# $ErrorActionPreference = 'silentlycontinue'
+$ErrorActionPreference = 'silentlycontinue'
 $WarningPreference = 'SilentlyContinue'
 
 $nl = [Environment]::NewLine
@@ -67,5 +67,4 @@ else {
     Read-Host -Prompt "Select correct option... $nl Press Enter to continue..."
 }
 }
-ADSH
-# while (1){mainMenu}
+while (1){mainMenu}
